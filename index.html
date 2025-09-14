@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的植物日誌</title>
     <style>
+        /* 您的 CSS 程式碼 */
         * {
             margin: 0;
             padding: 0;
@@ -655,7 +656,7 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-        
+       
         .preview-item:hover .preview-remove {
             opacity: 1;
         }
@@ -774,7 +775,7 @@
             </div>
             
             <div class="gallery" id="plant-gallery">
-                </div>
+            </div>
         </div>
 
         <div id="journal-page" class="page hidden journal-page">
@@ -803,18 +804,18 @@
                             </div>
                         </div>
                         <div class="journal-actions">
-                            <button class="btn btn-primary" onclick="addRecord()">📝 新增記錄</button>
+                            <button class="btn btn-primary" onclick="openAddRecordForm()">📝 新增記錄</button>
                         </div>
                     </div>
                 </div>
             </div>
             
             <div class="timeline" id="timeline">
-                </div>
+            </div>
         </div>
     </div>
 
-    <button class="add-plant-btn" onclick="openPlantForm()" title="添加新植物">+</button>
+    <button class="add-plant-btn" onclick="openAddPlantForm()" title="添加新植物">+</button>
 
     <div id="plantFormModal" class="form-modal">
         <div class="form-modal-content">
@@ -825,12 +826,12 @@
             <div class="form-body">
                 <form id="plantForm">
                     <input type="hidden" id="plant-id">
-                    <div class="form-group">
+                    <div class="form-group" id="plant-name-group">
                         <label class="form-label" for="plant-name">植物名稱 *</label>
                         <input type="text" id="plant-name" class="form-input" required placeholder="例如：龜背芋、多肉植物等">
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group" id="plant-status-group">
                         <label class="form-label" for="plant-status">植物狀態</label>
                         <select id="plant-status" class="form-select">
                             <option value="healthy">健康良好 🟢</option>
@@ -839,7 +840,7 @@
                         </select>
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group" id="main-image-group">
                         <label class="form-label">主要照片 *</label>
                         <div class="image-upload-area" id="main-upload-area" onclick="document.getElementById('main-image-input').click()">
                             <input type="file" id="main-image-input" accept="image/*" style="display: none;">
@@ -850,8 +851,8 @@
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label" for="record-date">首次記錄日期</label>
-                        <input type="date" id="record-date" class="form-input">
+                        <label class="form-label" for="record-date">記錄日期</label>
+                        <input type="date" id="record-date" class="form-input" required>
                     </div>
                     
                     <div class="form-group">
@@ -871,7 +872,7 @@
                     
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="closePlantForm()">取消</button>
-                        <button type="submit" class="btn btn-primary">保存植物</button>
+                        <button type="submit" class="btn btn-primary" id="submit-btn">保存</button>
                     </div>
                 </form>
             </div>
@@ -884,13 +885,10 @@
             <img class="modal-image" id="modalImage">
         </div>
     </div>
-
+    
     <script>
         let plants = [];
         let currentPlantId = null;
-        let isEditing = false;
-        let mainImageFile = null;
-        let recordImageFiles = [];
 
         // DOM 元素
         const galleryPage = document.getElementById('gallery-page');
@@ -904,6 +902,24 @@
         const filterSelect = document.getElementById('filter-select');
         const imageModal = document.getElementById('imageModal');
         const modalImage = document.getElementById('modalImage');
+
+        // 表單相關 DOM
+        const plantNameGroup = document.getElementById('plant-name-group');
+        const plantNameInput = document.getElementById('plant-name');
+        const plantStatusGroup = document.getElementById('plant-status-group');
+        const plantStatusSelect = document.getElementById('plant-status');
+        const mainImageGroup = document.getElementById('main-image-group');
+        const mainImageInput = document.getElementById('main-image-input');
+        const recordDateInput = document.getElementById('record-date');
+        const recordImagesInput = document.getElementById('record-images-input');
+        const recordTextarea = document.getElementById('record-text');
+        const mainImagePreview = document.getElementById('main-image-preview');
+        const recordImagesPreview = document.getElementById('record-images-preview');
+        const submitBtn = document.getElementById('submit-btn');
+
+        // 圖片上傳暫存
+        let mainImageFile = null;
+        let recordImageFiles = [];
 
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
@@ -922,7 +938,10 @@
 
         function showJournal(plantId) {
             const plant = plants.find(p => p.id === plantId);
-            if (!plant) return;
+            if (!plant) {
+                console.error('Plant not found:', plantId);
+                return;
+            }
 
             currentPlantId = plantId;
             galleryPage.classList.add('hidden');
@@ -938,40 +957,44 @@
             updateJournalStats(plant);
         }
 
-        function openPlantForm(plant = null) {
+        // 頁面切換：新增植物
+        function openAddPlantForm() {
             plantForm.reset();
-            document.getElementById('main-image-preview').innerHTML = '';
-            document.getElementById('record-images-preview').innerHTML = '';
+            plantFormModal.style.display = 'block';
+            formTitle.textContent = '添加新植物';
+            submitBtn.textContent = '保存植物';
+
+            // 顯示所有欄位
+            plantNameGroup.style.display = 'block';
+            plantStatusGroup.style.display = 'block';
+            mainImageGroup.style.display = 'block';
+            recordDateInput.valueAsDate = new Date(); // 預設為今天
+            
+            // 清空預覽
+            mainImagePreview.innerHTML = '';
+            recordImagesPreview.innerHTML = '';
             mainImageFile = null;
             recordImageFiles = [];
+        }
 
-            if (plant) {
-                isEditing = true;
-                formTitle.textContent = '新增記錄';
-                document.getElementById('plant-id').value = plant.id;
-                document.getElementById('plant-name').value = plant.name;
-                document.getElementById('plant-status').value = plant.status;
-                
-                // 隱藏不相關的欄位
-                document.querySelector('label[for="plant-name"]').style.display = 'none';
-                document.getElementById('plant-name').style.display = 'none';
-                document.querySelector('label[for="plant-status"]').style.display = 'none';
-                document.getElementById('plant-status').style.display = 'none';
-                document.querySelector('label[for="main-image-input"]').style.display = 'none';
-                document.getElementById('main-upload-area').style.display = 'none';
-                document.getElementById('record-date').valueAsDate = new Date(); // 預設為今天
-            } else {
-                isEditing = false;
-                formTitle.textContent = '添加新植物';
-                document.getElementById('plant-id').value = '';
-                document.querySelector('label[for="plant-name"]').style.display = 'block';
-                document.getElementById('plant-name').style.display = 'block';
-                document.querySelector('label[for="plant-status"]').style.display = 'block';
-                document.getElementById('plant-status').style.display = 'block';
-                document.querySelector('label[for="main-image-input"]').style.display = 'block';
-                document.getElementById('main-upload-area').style.display = 'block';
-            }
+        // 頁面切換：新增記錄
+        function openAddRecordForm() {
+            plantForm.reset();
             plantFormModal.style.display = 'block';
+            formTitle.textContent = '新增記錄';
+            submitBtn.textContent = '保存記錄';
+
+            // 隱藏不需要的欄位
+            plantNameGroup.style.display = 'none';
+            plantStatusGroup.style.display = 'none';
+            mainImageGroup.style.display = 'none';
+            recordDateInput.valueAsDate = new Date(); // 預設為今天
+
+            // 清空預覽
+            mainImagePreview.innerHTML = '';
+            recordImagesPreview.innerHTML = '';
+            mainImageFile = null;
+            recordImageFiles = [];
         }
 
         function closePlantForm() {
@@ -984,9 +1007,14 @@
         }
 
         function loadPlants() {
-            const storedPlants = localStorage.getItem('myPlantJournal');
-            if (storedPlants) {
-                plants = JSON.parse(storedPlants);
+            try {
+                const storedPlants = localStorage.getItem('myPlantJournal');
+                if (storedPlants) {
+                    plants = JSON.parse(storedPlants);
+                }
+            } catch (e) {
+                console.error('Failed to load plants from localStorage', e);
+                plants = [];
             }
         }
 
@@ -1044,198 +1072,192 @@
                 return;
             }
 
-            plant.records.sort((a, b) => new Date(b.date) - new Date(a.date));
+            // 確保記錄是按日期排序
+            const sortedRecords = [...plant.records].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            plant.records.forEach(record => {
+            sortedRecords.forEach(record => {
                 const item = document.createElement('div');
                 item.className = 'timeline-item';
-                
-                const formattedDate = new Date(record.date).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' });
-                
-                let imagesHTML = '';
+
+                let imagesHtml = '';
                 if (record.images && record.images.length > 0) {
-                    imagesHTML = `<div class="record-images">
-                        ${record.images.map(imgSrc => `<div class="record-image" style="background-image: url('${imgSrc}');" onclick="event.stopPropagation(); openModal('${imgSrc}')"></div>`).join('')}
-                    </div>`;
+                    imagesHtml = `<div class="record-images">` +
+                                 record.images.map(imgSrc => `<div class="record-image" style="background-image: url('${imgSrc}');" onclick="openModal('${imgSrc}', event)"></div>`).join('') +
+                                 `</div>`;
                 }
 
                 item.innerHTML = `
-                    <div class="record-date">📅 ${formattedDate}</div>
-                    ${record.text ? `<div class="record-text">${record.text.replace(/\n/g, '<br>')}</div>` : ''}
-                    ${imagesHTML}
+                    <div class="record-date">${new Date(record.date).toLocaleDateString('zh-TW')}</div>
+                    ${imagesHtml}
+                    <div class="record-text">${record.text || '無記錄內容'}</div>
                 `;
                 timeline.appendChild(item);
             });
         }
 
-        // 更新日誌統計數據
+        // 更新日誌頁面數據統計
         function updateJournalStats(plant) {
             const totalRecords = plant.records.length;
             document.getElementById('total-records').textContent = totalRecords;
-            
-            if (totalRecords > 0) {
-                const firstDate = new Date(plant.records[0].date);
-                const lastDate = new Date(plant.records[totalRecords - 1].date);
-                const diffTime = Math.abs(lastDate - firstDate);
-                const careDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (totalRecords >= 2) {
+                const dates = plant.records.map(r => new Date(r.date)).sort((a, b) => a - b);
+                const firstDate = dates[0];
+                const lastDate = dates[dates.length - 1];
+                const careDays = Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24));
                 document.getElementById('care-days').textContent = careDays;
 
-                const intervals = [];
-                for (let i = 1; i < totalRecords; i++) {
-                    const prevDate = new Date(plant.records[i - 1].date);
-                    const currDate = new Date(plant.records[i].date);
-                    intervals.push(Math.abs(currDate - prevDate) / (1000 * 60 * 60 * 24));
+                let totalInterval = 0;
+                for (let i = 1; i < dates.length; i++) {
+                    totalInterval += (dates[i] - dates[i-1]) / (1000 * 60 * 60 * 24);
                 }
-                const avgInterval = intervals.length > 0 ? (intervals.reduce((sum, val) => sum + val, 0) / intervals.length).toFixed(1) : 0;
+                const avgInterval = (totalInterval / (dates.length - 1)).toFixed(1);
                 document.getElementById('avg-interval').textContent = avgInterval;
-
             } else {
                 document.getElementById('care-days').textContent = '0';
-                document.getElementById('avg-interval').textContent = '0';
+                document.getElementById('avg-interval').textContent = '無';
             }
         }
 
-        // 處理表單提交
+        // 圖片預覽功能
+        function handleImagePreview(input, previewContainer, isMainImage) {
+            previewContainer.innerHTML = '';
+            const files = input.files;
+            
+            // 如果是主要照片，只處理第一張
+            if (isMainImage && files.length > 0) {
+                const file = files[0];
+                mainImageFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const previewItem = createPreviewItem(e.target.result, () => {
+                        mainImagePreview.innerHTML = '';
+                        mainImageFile = null;
+                        mainImageInput.value = '';
+                    });
+                    previewContainer.appendChild(previewItem);
+                };
+                reader.readAsDataURL(file);
+            }
+            // 如果是記錄照片，處理所有照片
+            else if (!isMainImage && files.length > 0) {
+                recordImageFiles = [...files];
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const previewItem = createPreviewItem(e.target.result, () => {
+                            // 移除對應的預覽和檔案
+                            const itemToRemove = e.target.result;
+                            const index = recordImageFiles.findIndex(f => f.previewUrl === itemToRemove);
+                            if (index > -1) {
+                                recordImageFiles.splice(index, 1);
+                                previewContainer.removeChild(previewItem);
+                            }
+                        });
+                        previewItem.querySelector('.preview-remove').onclick = (e) => {
+                            e.stopPropagation();
+                            recordImageFiles = recordImageFiles.filter(f => f.previewUrl !== e.target.closest('.preview-item').dataset.url);
+                            e.target.closest('.preview-item').remove();
+                        };
+                        previewContainer.appendChild(previewItem);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        }
+
+        function createPreviewItem(src, removeHandler) {
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.dataset.url = src;
+            div.innerHTML = `
+                <img src="${src}" class="preview-image">
+                <button type="button" class="preview-remove">✕</button>
+            `;
+            div.querySelector('.preview-remove').onclick = removeHandler;
+            return div;
+        }
+
+        mainImageInput.addEventListener('change', (e) => handleImagePreview(e.target, mainImagePreview, true));
+        recordImagesInput.addEventListener('change', (e) => handleImagePreview(e.target, recordImagesPreview, false));
+        
+        // 表單提交
         plantForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const plantName = document.getElementById('plant-name').value;
-            const plantStatus = document.getElementById('plant-status').value;
-            const recordDate = document.getElementById('record-date').value;
-            const recordText = document.getElementById('record-text').value;
 
-            if (isEditing) {
-                // 新增記錄
-                const plant = plants.find(p => p.id === currentPlantId);
-                const record = {
-                    date: recordDate || new Date().toISOString().split('T')[0],
-                    text: recordText,
-                    images: await Promise.all(recordImageFiles.map(fileToBase64)),
-                };
-                plant.records.push(record);
-            } else {
-                // 新增植物
-                if (!mainImageFile) {
-                    alert('請選擇主要照片！');
+            // 處理圖片
+            const mainImageSrc = mainImageFile ? await convertFileToBase64(mainImageFile) : null;
+            const recordImageSrcs = await Promise.all(recordImageFiles.map(file => convertFileToBase64(file)));
+            
+            const recordData = {
+                date: recordDateInput.value,
+                text: recordTextarea.value,
+                images: recordImageSrcs
+            };
+
+            if (plantNameGroup.style.display !== 'none') { // 新增植物
+                if (!plantNameInput.value || !mainImageSrc) {
+                    alert('請填寫植物名稱並上傳主要照片！');
                     return;
                 }
                 const newPlant = {
-                    id: Date.now().toString(),
-                    name: plantName,
-                    status: plantStatus,
-                    mainImage: await fileToBase64(mainImageFile),
-                    records: [],
+                    id: `plant-${Date.now()}`,
+                    name: plantNameInput.value,
+                    status: plantStatusSelect.value,
+                    mainImage: mainImageSrc,
+                    records: [recordData]
                 };
-                if (recordDate || recordText || recordImageFiles.length > 0) {
-                    newPlant.records.push({
-                        date: recordDate || new Date().toISOString().split('T')[0],
-                        text: recordText,
-                        images: await Promise.all(recordImageFiles.map(fileToBase64)),
-                    });
-                }
                 plants.push(newPlant);
+            } else { // 新增記錄
+                const plant = plants.find(p => p.id === currentPlantId);
+                if (plant) {
+                    plant.records.push(recordData);
+                }
             }
 
             savePlants();
             closePlantForm();
+            renderGallery();
+            
             if (currentPlantId) {
-                showJournal(currentPlantId);
-            } else {
-                renderGallery();
+                showJournal(currentPlantId); // 回到日誌頁面
             }
         });
 
-        // 處理刪除植物
-        function deletePlant(plantId) {
-            if (confirm('確定要刪除這株植物及其所有記錄嗎？此操作無法復原。')) {
-                plants = plants.filter(p => p.id !== plantId);
-                savePlants();
-                showGallery();
-            }
-        }
-
-        // 處理新增記錄
-        function addRecord() {
-            const plant = plants.find(p => p.id === currentPlantId);
-            if (plant) {
-                openPlantForm(plant);
-            }
-        }
-        
-        // 處理圖片上傳
-        const mainImageInput = document.getElementById('main-image-input');
-        const recordImagesInput = document.getElementById('record-images-input');
-
-        mainImageInput.addEventListener('change', (e) => handleImageUpload(e, 'main'));
-        recordImagesInput.addEventListener('change', (e) => handleImageUpload(e, 'record'));
-
-        function handleImageUpload(event, type) {
-            const files = event.target.files;
-            if (files.length > 0) {
-                const previewContainer = document.getElementById(type === 'main' ? 'main-image-preview' : 'record-images-preview');
-                previewContainer.innerHTML = '';
-                
-                if (type === 'main') {
-                    mainImageFile = files[0];
-                    renderImagePreview(mainImageFile, previewContainer, type);
-                } else {
-                    recordImageFiles = Array.from(files);
-                    recordImageFiles.forEach(file => renderImagePreview(file, previewContainer, type));
-                }
-            }
-        }
-
-        function renderImagePreview(file, container, type) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const previewItem = document.createElement('div');
-                previewItem.className = 'preview-item';
-                previewItem.innerHTML = `<img src="${e.target.result}" class="preview-image">`;
-                
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'preview-remove';
-                removeBtn.textContent = '✕';
-                removeBtn.onclick = () => {
-                    previewItem.remove();
-                    if (type === 'main') {
-                        mainImageFile = null;
-                        document.getElementById('main-image-input').value = '';
-                    } else {
-                        const index = recordImageFiles.indexOf(file);
-                        if (index > -1) {
-                            recordImageFiles.splice(index, 1);
-                        }
-                    }
-                };
-                previewItem.appendChild(removeBtn);
-                container.appendChild(previewItem);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // 將檔案轉換為 Base64 字串
-        function fileToBase64(file) {
+        // 將檔案轉換為 Base64
+        function convertFileToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.readAsDataURL(file);
                 reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
         }
-        
-        // 搜尋及篩選事件監聽
-        searchInput.addEventListener('input', renderGallery);
-        filterSelect.addEventListener('change', renderGallery);
 
-        // 圖片放大模態框
-        function openModal(imageSrc) {
-            imageModal.style.display = 'block';
+        // 刪除植物
+        function deletePlant(plantId) {
+            if (confirm('確定要刪除這株植物及其所有記錄嗎？此操作不可逆！')) {
+                plants = plants.filter(plant => plant.id !== plantId);
+                savePlants();
+                renderGallery();
+            }
+        }
+        
+        // 放大圖片
+        function openModal(imageSrc, event) {
+            event.stopPropagation(); // 防止點擊圖片時觸發父元素的事件
             modalImage.src = imageSrc;
+            imageModal.style.display = 'block';
         }
 
         function closeModal() {
             imageModal.style.display = 'none';
-            modalImage.src = '';
         }
+
+        // 搜尋與篩選
+        searchInput.addEventListener('input', renderGallery);
+        filterSelect.addEventListener('change', renderGallery);
     </script>
 </body>
 </html>
